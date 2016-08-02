@@ -1,3 +1,5 @@
+# Playbook for setting up OpenShift v3.2 requirements
+
 - hosts: all
   tasks:
         - name: yum clean all
