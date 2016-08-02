@@ -1,0 +1,67 @@
+- hosts: all
+  tasks:
+        - name: yum clean all
+          command: yum clean all
+
+        - name: subscription-manager refresh
+          command: "subscription-manager refresh"
+ 
+ 
+        - name: Enable chosen repositories
+          command: "subscription-manager repos --disable '*' --enable rhel-7-server-rpms --enable rhel-7-server-extras-rpms --enable rhel-7-server-ose-3.2-rpms"
+ 
+        - name: install libselinux-python
+          yum: name=libselinux-python state=installed
+
+        - name: install NetworkManager
+          yum: name=NetworkManager state=installed
+
+        - name: enable NetworkManager
+          service: name=NetworkManager enabled=true state=started
+
+        - name: Install required packages
+          yum:
+            name: "{{ item }}"
+            state: installed
+          with_items:
+            - wget
+            - git
+            - net-tools
+            - bind-utils
+            - iptables-services
+            - bridge-utils
+            - bash-completion
+
+        - name: Update the system
+          yum: state=latest name='*'        
+
+        - name: Install atomic-openshift-utils
+          yum: state=installed name=atomic-openshift-utils
+
+        - name: Install docker
+          yum: state=installed name='docker-1.10.3'
+
+        - name: Enable insecure docker registry
+          shell: sed -i "s|OPTIONS=.*|OPTIONS='--selinux-enabled --insecure-registry 172.30.0.0/16'|g" /etc/sysconfig/docker
+
+        - name: docker-storage-setup
+          shell: docker-storage-setup
+
+        - name: enable docker service
+          service: name=docker enabled=true state=started
+
+- hosts: masters
+  tasks:
+        - name: Install htpasswd
+          yum: state=installed name=httpd-tools
+
+        - name: ensure /etc/origin/master esists
+          file: path=/etc/origin/master state=directory
+
+        - name: checking if /etc/origin/master/htpasswd exists
+          stat: path=/etc/origin/master/htpasswd
+          register: p
+
+        - name: create developer user
+          shell: echo developer | htpasswd -i -c /etc/origin/master/htpasswd developer
+          when: p.stat.exists is not defined or not p.stat.exists
