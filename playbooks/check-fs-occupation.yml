@@ -1,0 +1,15 @@
+# Playbook for checking filesystem size/occupation under 80%
+#  In case the used size will be higher than 80% it will print and error
+#
+# Alessandro Arrichiello
+# <alezzandro@gmail.com>
+# http://alezzandro.com
+
+- hosts: all
+  user: root
+  tasks:
+        - name: test for available disk space
+          assert:
+            that: 
+              - not {{ ( item.fstype == 'ext4' or item.fstype == 'xfs' ) and ( item.size_available < item.size_total - ( item.size_total|float * 0.8 ) ) }}
+          with_items: ansible_mounts
